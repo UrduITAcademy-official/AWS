@@ -1,0 +1,749 @@
+*****************************************************************************************
+AWS CloudFormation Lecture Codes
+*****************************************************************************************
+
+CloudFormation Start : https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-guide.html
+
+Learn Template basics :https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/gettingstarted.templatebasics.html
+
+EC2 Resource Properties: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-instance.html#cfn-ec2-instance-imageid
+
+AWS CloudFormation Designer: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/working-with-templates-cfn-designer.html
+
+
+*******************************************************************************************
+Lecture 71 - CloudFormation Template (Resources Section)
+*******************************************************************************************
+
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Creating my First EC2 Instance",
+  "Resources": {
+    "MyVPC1": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16"
+      }
+    },
+    "MyPrivateSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVPC1"
+        },
+        "CidrBlock": "10.0.0.0/24"
+      }
+    },
+    "MyEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": "ami-041114ddee4a98333",
+        "SubnetId": {
+          "Ref": "MyPrivateSubnet"
+        }
+      }
+    }
+  }
+}
+
+
+*****************************************************************************************
+Lecture 72 - CloudFormation Template (Parameter Section)
+*****************************************************************************************
+
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "InstanceTypeParameter": {
+      "Type": "String",
+      "Default": "t2.micro",
+      "AllowedValues": ["t2.micro", "t2.nano", "m4.large", "t3.small"],
+      "Description": "Enter t2.micro, t2.nano, or m4.large. Default is t2.micro."
+    }
+  },
+  "Resources": {
+    "FirstEc2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": {
+          "Ref": "InstanceTypeParameter"
+        },
+        "ImageId": "ami-009d6802948d06e52"
+      }
+    }
+  }
+}
+***************************************************************************************
+Parameter SEction : S3 Bucket
+
+{
+  "Parameters": {
+    "S3BucketName": {
+      "Description": "Name of the S3 Bucket",
+      "Type": "String",
+      "ConstraintDescription": "S3BucketName must be between 3 and 63 characters in length.",
+      "MinLength": 3,
+      "MaxLength": 63
+    }
+  },
+  "Resources": {
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Ref": "S3BucketName"
+        }
+      }
+    }
+  }
+}
+
+
+********************************************************************************************
+********************************************************************************************
+Lecture 73 - CloudFormation Template (Mappings Section)
+********************************************************************************************
+
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Creating my First EC2 Instance & referencing a parameter",
+  "Metadata": {
+    "Instances": {
+      "Description": "Information about the instances"
+    }
+  },
+  "Parameters": {
+    "InstanceTypeParameter": {
+      "Type": "String",
+      "Default": "t2.small",
+      "AllowedValues": [
+        "t2.micro",
+        "t2.small",
+        "m4.large"
+      ],
+      "Description": "Enter t2.micro, t2.small, or m4.large. Default is t2.small."
+    }
+  },
+  "Mappings": {
+    "RegionMap": {
+      "us-east-1": {
+        "AMI": "ami-009d6802948d06e52"
+      },
+      "us-west-1": {
+        "AMI": "ami-0bdb828fd58c52235"
+      },
+      "eu-west-1": {
+        "AMI": "ami-047bb4163c506cd98"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-08569b978cc4dfa10"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-06cd52961ce9f0d85"
+      }
+    }
+  },
+  "Resources": {
+    "FirstEc2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": {
+          "Ref": "InstanceTypeParameter"
+        },
+        "ImageId": {
+          "Fn::FindInMap": [
+            "RegionMap",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+************************************************************************************
+Lecture 74 - CloudFormation Template (Conditions Section)
+************************************************************************************
+
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Mappings": {
+    "RegionMap": {
+      "us-east-1": { "AMI": "ami-0080e4c5bc078760e" },
+      "us-west-1": { "AMI": "ami-0bdb828fd58c52235" },
+      "eu-west-2": { "AMI": "ami-0aff88ed576e63e90" },
+	  "sa-east-1": { "AMI": "ami-07b14488da8ea02a0" },
+      "ap-southeast-2": { "AMI": "ami-00c3d41691e25e54c" },
+      "ap-southeast-1": { "AMI": "ami-08569b978cc4dfa10" },
+      "ap-northeast-1": { "AMI": "ami-06cd52961ce9f0d85" }
+    }
+  },
+  "Parameters": {
+   "MyInstanceType" : { 
+      "Type" : "String",
+      "Default" : "t2.micro",
+      "AllowedValues" : ["t2.micro", "t2.nano", "m4.large", "t3.small"]
+    },
+    "EnvironmentType": {
+      "Description": "Environment type.",
+	  "Type": "String",
+      "Default": "Dev",
+      "AllowedValues": ["prod", "Dev" ],
+      "ConstraintDescription": "must specify prod or Dev."
+    }
+   
+  },
+  "Conditions": {
+    "CreateProdResources": { "Fn::Equals": [ { "Ref": "EnvironmentType" }, "prod" ]},
+	"CreateDevResources" : { "Fn::Equals": [ { "Ref": "EnvironmentType" }, "Dev"  ]}
+  },
+  "Resources": {
+    "MyProdEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Condition": "CreateProdResources",
+      "Properties": {
+	  "InstanceType" : { "Ref" : "MyInstanceType" },
+      "ImageId": { "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "AMI" ]}
+      }
+    },
+    "MyDevEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+	  "Condition": "CreateDevResources",
+      "Properties": {
+	  "InstanceType" : { "Ref" : "MyInstanceType" },
+      "ImageId": { "Fn::FindInMap": [ "RegionMap", { "Ref": "AWS::Region" }, "AMI" ]}
+      }
+    },
+    "MountPoint": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Condition": "CreateProdResources",
+      "Properties": {
+        "InstanceId": { "Ref": "MyProdEC2Instance" },
+        "VolumeId": { "Ref": "NewVolume" }, 
+		"Device": "/dev/sdh" }
+    },
+    "NewVolume": {
+      "Type": "AWS::EC2::Volume",
+      "Condition": "CreateProdResources",
+      "Properties": {
+        "Size": "100",
+        "AvailabilityZone": { "Fn::GetAtt": [ "MyProdEC2Instance", "AvailabilityZone" ]}
+      }
+    }
+  }
+}
+
+
+************************************************************************************
+Lecture 75 - CloudFormation Template (Outputs Section)
+************************************************************************************
+
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Mappings": {
+    "RegionMap": {
+      "us-east-1": {
+        "AMI": "ami-0080e4c5bc078760e"
+      },
+      "us-west-1": {
+        "AMI": "ami-0bdb828fd58c52235"
+      },
+      "eu-west-2": {
+        "AMI": "ami-0aff88ed576e63e90"
+      },
+      "sa-east-1": {
+        "AMI": "ami-07b14488da8ea02a0"
+      },
+      "ap-southeast-2": {
+        "AMI": "ami-00c3d41691e25e54c"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-08569b978cc4dfa10"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-06cd52961ce9f0d85"
+      }
+    }
+  },
+  "Parameters": {
+    "MyInstanceType": {
+      "Type": "String",
+      "Default": "t2.micro",
+      "AllowedValues": [
+        "t2.micro",
+        "t2.nano",
+        "m4.large",
+        "t3.small"
+      ]
+    }
+  },
+  "Resources": {
+    "MyEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": {
+          "Ref": "MyInstanceType"
+        },
+        "ImageId": {
+          "Fn::FindInMap": [
+            "RegionMap",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        }
+      }
+    },
+    "MyBucket123": {
+      "Type": "AWS::S3::Bucket"
+    },
+    "MountPoint": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "MyEC2Instance"
+        },
+        "VolumeId": {
+          "Ref": "NewVolume"
+        },
+        "Device": "/dev/sdh"
+      }
+    },
+    "NewVolume": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "Size": "100",
+        "AvailabilityZone": {
+          "Fn::GetAtt": [
+            "MyEC2Instance",
+            "AvailabilityZone"
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "VolumeId": {
+      "Value": { "Ref": "NewVolume" }
+    },
+    "RegionName": {
+      "Value": { "Ref": "AWS::Region" }
+	  },
+      "BucketName": {
+        "Value": { "Ref": "MyBucket123" }
+      },
+      "PublicIP": {
+        "Value": { "Fn::GetAtt": [ "MyEC2Instance", "PublicIp"]},
+        "Description": "Newly created server IP address"
+		}
+    }
+  }
+
+
+************************************************************************************
+Lecture 76 - CloudFormation EC2 - & How to Update Stack
+************************************************************************************
+
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Mappings": {
+    "RegionMap": {
+      "us-east-1": {
+        "AMI": "ami-0c96d9489fa933423"
+      },
+      "us-west-1": {
+        "AMI": "ami-0bdb828fd58c52235"
+      },
+      "eu-west-2": {
+        "AMI": "ami-0aff88ed576e63e90"
+      },
+      "sa-east-1": {
+        "AMI": "ami-07b14488da8ea02a0"
+      },
+      "ap-southeast-2": {
+        "AMI": "ami-00c3d41691e25e54c"
+      },
+      "ap-southeast-1": {
+        "AMI": "ami-08569b978cc4dfa10"
+      },
+      "ap-northeast-1": {
+        "AMI": "ami-06cd52961ce9f0d85"
+      }
+    }
+  },
+  "Parameters": {
+    "MyInstanceType": {
+      "Type": "String",
+      "Default": "t2.micro",
+      "AllowedValues": [
+        "t2.micro",
+        "t2.nano",
+        "m4.large",
+        "t3.small"
+      ]
+    }
+  },
+  "Resources": {
+    "MyEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "InstanceType": {
+          "Ref": "MyInstanceType"
+        },
+        "ImageId": {
+          "Fn::FindInMap": [
+            "RegionMap",
+            {
+              "Ref": "AWS::Region"
+            },
+            "AMI"
+          ]
+        },
+        "KeyName": "RDP",
+        "AvailabilityZone": "us-east-1a",
+		"SecurityGroupIds": [
+          {
+            "Ref": "InstanceSecurityGroup"
+          }
+        ]
+       
+      }
+    },
+	"InstanceSecurityGroup": {
+          "Type": "AWS::EC2::SecurityGroup",
+          "Properties": {
+            "GroupDescription": "Allow HTTP and SSH traffic to our host",
+			"VpcId" : "vpc-580e4e21",
+            "SecurityGroupIngress": [
+              {
+                "IpProtocol": "tcp",
+                "FromPort": "22",
+                "ToPort": "22",
+                "CidrIp": "0.0.0.0/0"
+              },
+              {
+                "IpProtocol": "tcp",
+                "FromPort": "80",
+                "ToPort": "80",
+                "CidrIp": "0.0.0.0/0"
+              },
+			  {
+                "IpProtocol": "tcp",
+                "FromPort": "3389",
+                "ToPort": "3389",
+                "CidrIp": "0.0.0.0/0"
+              }
+			  
+            ],
+            "SecurityGroupEgress": [
+              {
+                "IpProtocol": "tcp",
+                "FromPort": "1",
+                "ToPort": "65535",
+                "CidrIp": "0.0.0.0/0"
+              }
+            ]
+          }
+        }
+  },
+  "Outputs": {
+    "RegionName": {
+      "Value": {
+        "Ref": "AWS::Region"
+      }
+    },
+    "PublicIP": {
+      "Value": {
+        "Fn::GetAtt": [
+          "MyEC2Instance",
+          "PublicIp"
+        ]
+      },
+      "Description": "Newly created server IP address"
+    }
+  }
+}
+
+************************************************************************************
+Lecture 77 - Managing VPC using CloudFormation
+************************************************************************************
+
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "MyVPC": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": {
+          "Ref": "VpcCidrBlock"
+        }
+      }
+    },
+    "PublicSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVPC"
+        },
+        "CidrBlock": {
+          "Ref": "PublicSubnetCidrBlock"
+        },
+        "MapPublicIpOnLaunch": "True"
+      }
+    },
+    "IGW": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {}
+    },
+    "IgwAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVPC"
+        },
+        "InternetGatewayId": {
+          "Ref": "IGW"
+        }
+      }
+    },
+    "PublicRouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "MyVPC"
+        }
+      }
+    },
+    "PublicRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "IGW",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "IGW"
+        }
+      }
+    },
+    "PublicSubnetRouteAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PublicRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PublicSubnet"
+        }
+      }
+    },
+    "InstanceSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow HTTP and SSH traffic to our host",
+        "VpcId": { "Ref" : "MyVPC" },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "1",
+            "ToPort": "65535",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "MyEC2Instance": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": "ami-0c96d9489fa933423",
+        "KeyName": {
+          "Ref": "SSHKeyName"
+        },
+        "SubnetId": {
+          "Ref": "PublicSubnet"
+        },
+        "InstanceType": {"Ref" : "InstanceTypeParameter" },
+        "SecurityGroupIds": [
+          {
+            "Ref": "InstanceSecurityGroup"
+          }
+        ]
+      }
+    }
+  },
+  "Parameters": {
+  "InstanceTypeParameter": {
+      "Type": "String",
+      "Default": "t2.micro",
+      "AllowedValues": ["t2.micro", "t2.nano", "m4.large", "t3.small"],
+      "Description": "Enter t2.micro, t3.small, or m4.large. Default is t2.micro."
+    },
+    "VpcCidrBlock": {
+      "Description": "VPC CIDR Range (will be a /16 block)",
+      "Type": "String",
+      "Default": "10.0.0.0/16"
+    },
+    "PublicSubnetCidrBlock": {
+      "Description": "Public Subnet CIDR Range",
+      "Type": "String",
+      "Default": "10.0.1.0/24"
+    },
+    "SSHKeyName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+    }
+  },
+  "Outputs": {
+    "MyEC2InstancePublicIP": {
+      "Value": {
+        "Fn::GetAtt": [
+          "MyEC2Instance",
+          "PublicIp"
+        ]
+      }
+    }
+  }
+}
+
+************************************************************************************
+Lecture 78 - Managing S3 using CloudFormation
+************************************************************************************
+
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "S3BucketName": {
+      "Description": "Name of the S3 Bucket",
+      "Type": "String",
+      "ConstraintDescription": "S3BucketName must be between 3 and 63 characters in length.",
+      "MinLength": 3,
+      "MaxLength": 63
+    },
+    "LifecycleConfiguration": {
+      "Description": "Specify a number of days to keep the file in a bucket.",
+      "Type": "Number",
+      "MinValue": "0",
+      "MaxValue": "365"
+    }
+  },
+  "Resources": {
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Ref": "S3BucketName"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "GlacierRule",
+              "Prefix": "glacier",
+              "Status": "Enabled",
+              "ExpirationInDays": "365",
+              "Transitions": [
+                {
+                  "TransitionInDays": "15",
+                  "StorageClass": "Glacier"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+
+*******************************************************************************************
+Cloudformation Designer code:
+*******************************************************************************************
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "e98006e7-007b-4cb5-ab79-69781cfebaee": {
+                "size": {
+                    "width": 150,
+                    "height": 150
+                },
+                "position": {
+                    "x": 360,
+                    "y": 60
+                },
+                "z": 1,
+                "embeds": [],
+                "iscontainedinside": [
+                    "bf4e7075-d3ea-417a-8a8a-4981e84ae372"
+                ]
+            },
+            "bf4e7075-d3ea-417a-8a8a-4981e84ae372": {
+                "size": {
+                    "width": 150,
+                    "height": 150
+                },
+                "position": {
+                    "x": 60,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            }
+        }
+    },
+    "Resources": {
+        "MyVPC1": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "bf4e7075-d3ea-417a-8a8a-4981e84ae372"
+                }
+            }
+        },
+        "Subnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "MyVPC1"
+                },
+                "CidrBlock": "10.0.0.0/24"
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "e98006e7-007b-4cb5-ab79-69781cfebaee"
+                }
+            }
+        }
+    }
+}
+
+
+*******************************************************************************************
+
+CloudFormation Codes.txt
+Displaying CloudFormation Codes.txt.
